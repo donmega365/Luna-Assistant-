@@ -1,5 +1,7 @@
 name: Build APK
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -13,4 +15,32 @@ jobs:
           D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
           echo "PROJ=$D" >> $GITHUB_ENV
       - uses: actions/setup-java@v4
-        with: { distribution:
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build
+        shell: bash
+        run: |
+          cd "$PROJ"
+          gradle assembleDebug --console=plain 2>&1 | tee build.log
+      - name: Show errors
+        if: failure()
+        run: |
+          cd "$PROJ"
+          grep -E '^e: ' build.log | sed -E 's#file://[^ ]*/assistant/##' | cut -c1-150 | head -20 >> $GITHUB_STEP_SUMMARY
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          cp "$(find "$PROJ" -name '*.apk' | head -1)" out/Luna.apk
+          ls -lh out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Luna-APK
+          path: out/Luna.apk
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v${{ github.run_number }}" out/Luna.apk --title "Luna v${{ github.run_number }}" --notes "Debug APK"
