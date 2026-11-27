@@ -10,7 +10,6 @@ jobs:
           [ -f Luna.zip ] && unzip -qo Luna.zip || true
           D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
           echo "PROJ=$D" >> $GITHUB_ENV
-          echo "Project folder: $D"
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
