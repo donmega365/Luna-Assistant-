@@ -5,22 +5,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q Luna.zip
+      - name: Find project
+        run: |
+          [ -f Luna.zip ] && unzip -qo Luna.zip || true
+          D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
+          echo "PROJ=$D" >> $GITHUB_ENV
+          echo "Project folder: $D"
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.9" }
       - name: Build
-        working-directory: Luna
         run: |
+          cd "$PROJ"
           set -o pipefail
           gradle assembleDebug --console=plain 2>&1 | tee build.log
       - name: Show errors
         if: failure()
-        working-directory: Luna
         run: |
+          cd "$PROJ"
           echo '```' >> $GITHUB_STEP_SUMMARY
           grep -E '^e: ' build.log | sed -E 's#file://[^ ]*/assistant/##' | cut -c1-150 | head -20 >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
-        with: { name: Luna-APK, path: Luna/app/build/outputs/apk/debug/app-debug.apk }
+        with: { name: Luna-APK, path: "${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk" }
