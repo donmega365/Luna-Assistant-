@@ -1,5 +1,7 @@
 name: Build APK
 on: [push, workflow_dispatch]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -7,24 +9,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Find project
         run: |
-          [ -f Luna.zip ] && unzip -qo Luna.zip || true
+          for z in *.zip; do [ -f "$z" ] && unzip -qo "$z"; done || true
           D=$(dirname "$(find . -name settings.gradle.kts | head -1)")
           echo "PROJ=$D" >> $GITHUB_ENV
       - uses: actions/setup-java@v4
-        with: { distribution: temurin, java-version: 17 }
-      - uses: gradle/actions/setup-gradle@v4
-        with: { gradle-version: "8.9" }
-      - name: Build
-        run: |
-          cd "$PROJ"
-          set -o pipefail
-          gradle assembleDebug --console=plain 2>&1 | tee build.log
-      - name: Show errors
-        if: failure()
-        run: |
-          cd "$PROJ"
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E '^e: ' build.log | sed -E 's#file://[^ ]*/assistant/##' | cut -c1-150 | head -20 >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-      - uses: actions/upload-artifact@v4
-        with: { name: Luna-APK, path: "${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk" }
+        with: { distribution:
